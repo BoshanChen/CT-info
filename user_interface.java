@@ -26,66 +26,31 @@ public class user_interface {
      * @return true if added successfully, false otherwise.
      */
     public static boolean add(Scanner sc) {
-        // dorm name
-        String dorm = "";
-        System.out.println("Please enter your dorm name:");
-        while (true) {
-            dorm = sc.nextLine();
-            if (containsOnlyLetters(dorm))
-                break;
-            System.out.println("illegal dorm name! Please enter again:");
-        }
-        dorm = cap_string(dorm);
-        // dorm number
-        long num;
-        System.out.println("Please enter your room number:");
-        while (true) {
-            try {
-                num = Integer.parseInt(sc.nextLine());
-                if (num > 100 && num < 10000) {
-                    break;
-                }
-                System.out.println("illegal room number! Please try again:");
-            } catch (Exception e) {
-                System.out.println("illegal room number! Please try again:");
-            }
-        }
+        // read room info
+        Object[] roomInfo = readRoomInfo(sc);
+        String dorm = (String)roomInfo[0];
+        long num = (long)roomInfo[1];
         // check if the room is existed
-        if (table.containsKey(dorm + num)) {
+        if (table.containsKey((String)roomInfo[0] + (long)roomInfo[1])) {
             System.out
                 .println("This room is already existed! Please try another room or use 'update'.");
             return false;
         }
-        // user's name
-        String name = "";
-        System.out.println("Please enter your name:");
-        while (true) {
-            name = sc.nextLine();
-            if (containsOnlyLetters(name))
-                break;
-            System.out.println("illegal name! Please enter again:");
-        }
-        name = cap_string(name);
-        // user's test result
-        System.out.println("Please enter your test result:(postive/negative/null)");
-        String result = "";
-        Boolean test = null;
-        while (true) {
-            result = sc.nextLine();
-            if (containsOnlyLetters(result)) {
-                if (result.equalsIgnoreCase("positive")) {
-                    test = true;
-                    break;
-                } else if (result.equalsIgnoreCase("negative")) {
-                    test = false;
-                    break;
-                } else if (result.equalsIgnoreCase("null")) {
-                    test = null;
-                    break;
-                }
+        // ask user whether to add resident info
+        System.out.println("Do you want to add resident info to this room?(y/n):");
+        String ans = "";
+        while(true) {
+            ans = sc.nextLine();
+            if(ans.equalsIgnoreCase("y")) break;
+            else if(ans.equalsIgnoreCase("n")) {
+                Room room = new Room(dorm, num);
+                return table.put(dorm + num, room);
             }
-            System.out.println("illegal result! Please enter again:");
         }
+        // read resident info
+        String[] res = readResInfo(sc);
+        String name = res[0];
+        Boolean test = stringToBoolean(res[1]);
         // create Resident obj
         Resident stu = new Resident(name, test);
         // create Room obj
@@ -103,30 +68,11 @@ public class user_interface {
      * @return the Room object has been deleted, null if the room doesn't exist.
      */
     public static Room delete(Scanner sc) {
-        // dorm name
-        String dorm = "";
-        System.out.println("Please enter your dorm name:");
-        while (true) {
-            dorm = sc.nextLine();
-            if (containsOnlyLetters(dorm))
-                break;
-            System.out.println("illegal dorm name! Please enter again:");
-        }
-        dorm = cap_string(dorm);
-        // dorm number
-        long num;
-        System.out.println("Please enter your room number:");
-        while (true) {
-            try {
-                num = Integer.parseInt(sc.nextLine());
-                if (num > 100 && num < 10000) {
-                    break;
-                }
-                System.out.println("illegal room number! Please try again:");
-            } catch (Exception e) {
-                System.out.println("illegal room number! Please try again:");
-            }
-        }
+        // read room info
+        Object[] roomInfo = readRoomInfo(sc);
+        String dorm = (String)roomInfo[0];
+        long num = (long)roomInfo[1];
+        // remove operation
         return table.remove(dorm + num);
     }
 
@@ -137,37 +83,73 @@ public class user_interface {
      * @param sc sanner to read user input.
      * @return true if update successfully, false otherwise.
      */
-    public static boolean update(Scanner sc) {
-        // dorm name
-        String dorm = "";
-        System.out.println("Please enter your dorm name:");
-        while (true) {
-            dorm = sc.nextLine();
-            if (containsOnlyLetters(dorm))
-                break;
-            System.out.println("illegal dorm name! Please enter again:");
+    public static Resident update(Scanner sc) {
+        // read room info
+        Object[] roomInfo = readRoomInfo(sc);
+        String dorm = (String)roomInfo[0];
+        long num = (long)roomInfo[1];
+        // update operation
+        if (!table.containsKey(dorm + num)) { // when the room doesn't exist
+            System.out.println("The room does not existed! Please try 'add'.");
+            return null;
         }
-        dorm = cap_string(dorm);
-        // dorm number
-        long num;
-        System.out.println("Please enter your room number:");
-        while (true) {
-            try {
-                num = Integer.parseInt(sc.nextLine());
-                if (num > 100 && num < 10000) {
+        else if (!table.get(dorm + num).isEmpty()) { // updates resident's test result
+            String result;
+            Boolean res;
+            while(true) {
+                System.out.println("Please enter your latest test result (positive/negative/null): ");
+                result = sc.nextLine().toLowerCase();
+                if(result.equals("positive") || result.equals("negative") || result.equals("null")) {
+                    res = stringToBoolean(result);
                     break;
                 }
-                System.out.println("illegal room number! Please try again:");
-            } catch (Exception e) {
-                System.out.println("illegal room number! Please try again:");
             }
+            table.updates(dorm, num, res);
+            return table.get(dorm+num).getResident();
         }
-        // update operation
-        if (!table.containsKey(dorm + num))
-            System.out.println("The room does not existed! Please try 'add'.");
-        return table.updates(dorm + num);
+        else { // update resident to an empty room
+            String[] resident = readResInfo(sc);
+            Resident res = new Resident(resident[0], stringToBoolean(resident[1]));
+            table.get(dorm + num).addResident(res);
+            return res;
+        }
+        
     }
 
+    /**
+     * Convert Boolean type "true", "false", "null" to String "positive", "negative",
+     * "haven't taken test yet" respectively.
+     * 
+     * @param res the Boolean type to be converted
+     * @return corresponding string
+     */
+    private static String booleanToString(Boolean res) {
+        String result = "";
+        if(res == null) result = "hasn't taken test yet";
+        else if(res == false) result = "negative";
+        else result = "positive";
+        return result;
+    }
+    
+    /**
+     * Convert String "positive", "negative", "null" to Boolean type "true", "false",
+     * or "null" respectively.
+     * 
+     * @param s the String o be converted
+     * @return corresponding Boolean type
+     */
+    private static Boolean stringToBoolean(String s) {
+        Boolean result = null;
+        if (s.equalsIgnoreCase("positive")) {
+            result = true;
+        } else if (s.equalsIgnoreCase("negative")) {
+            result = false;
+        } else if (s.equalsIgnoreCase("null")) {
+            result = null;
+        }
+        return result;
+    }
+    
     /**
      * Search the resident's test result with given room info (dorm name + room number).
      * This needs the resident's information has been added before.
@@ -176,30 +158,11 @@ public class user_interface {
      * @return the Resident object, null if the room info doesn't exist.
      */
     public static Resident search(Scanner sc) {
-        // dorm name
-        String dorm = "";
-        System.out.println("Please enter your dorm name:");
-        while (true) {
-            dorm = sc.nextLine();
-            if (containsOnlyLetters(dorm))
-                break;
-            System.out.println("illegal dorm name! Please enter again:");
-        }
-        dorm = cap_string(dorm);
-        // dorm number
-        long num;
-        System.out.println("Please enter your room number:");
-        while (true) {
-            try {
-                num = Integer.parseInt(sc.nextLine());
-                if (num > 100 && num < 10000) {
-                    break;
-                }
-                System.out.println("illegal room number! Please try again:");
-            } catch (Exception e) {
-                System.out.println("illegal room number! Please try again:");
-            }
-        }
+        // read room info
+        Object[] roomInfo = readRoomInfo(sc);
+        String dorm = (String)roomInfo[0];
+        long num = (long)roomInfo[1];
+        //search operation
         if (!table.containsKey(dorm + num))
             return null;
         return table.get(dorm + num).getResident();
@@ -306,8 +269,68 @@ public class user_interface {
         return onlyLetters;
     }
 
+    private static String[] readResInfo(Scanner sc) {
+        // user's name
+        String name = "";
+        System.out.println("Please enter your name:");
+        while (true) {
+            name = sc.nextLine();
+            if (containsOnlyLetters(name))
+                break;
+            System.out.println("illegal name! Please enter again:");
+        }
+        name = cap_string(name);
+        // user's test result
+        System.out.println("Please enter your test result:(postive/negative/null)");
+        String result = "";
+        while (true) {
+            result = sc.nextLine();
+            if (containsOnlyLetters(result)) {
+                if (result.equalsIgnoreCase("positive")) {
+                    break;
+                } else if (result.equalsIgnoreCase("negative")) {
+                    break;
+                } else if (result.equalsIgnoreCase("null")) {
+                    break;
+                }
+            }
+            System.out.println("illegal result! Please enter again:");
+        }
+        String[] ret = new String[] {name, result}; 
+        return ret;
+    }
+    
+    private static Object[] readRoomInfo(Scanner sc) {
+        // dorm name
+        String dorm = "";
+        System.out.println("Please enter your dorm name:");
+        while (true) {
+            dorm = sc.nextLine();
+            if (containsOnlyLetters(dorm))
+                break;
+            System.out.println("illegal dorm name! Please enter again:");
+        }
+        dorm = cap_string(dorm);
+        // dorm number
+        long num;
+        System.out.println("Please enter your room number:");
+        while (true) {
+            try {
+                num = Integer.parseInt(sc.nextLine());
+                if (num > 100 && num < 10000) {
+                    break;
+                }
+                System.out.println("illegal room number! Please try again:");
+            } catch (Exception e) {
+                System.out.println("illegal room number! Please try again:");
+            }
+        }
+        return new Object[] {dorm,num};
+    }
+    
     public static void main(String[] arg) {
         Scanner sc = new Scanner(System.in);
+        boolean first = true;
 
         char instr = '\0';
         line();
@@ -316,6 +339,8 @@ public class user_interface {
             + "You can also search others' information if you know their name, dorm, and room number.");
         menu();
         while (instr != 'q') {
+            if(!first)line();
+            first = false;
             System.out.println("Enter your action:");
             instr = firstChar(sc);
 
@@ -336,19 +361,17 @@ public class user_interface {
             } else if (instr == 'm') {
                 menu();
             } else if (instr == 'u') {
-                boolean update = update(sc);
-                System.out.println("The result has been changed to" + update + ".");
+                Resident res = update(sc);
+                String result = booleanToString(res.getResult());
+                System.out.println("The resident has been updated:" + res.getName() + ", test result: " + result + ".");
             } else if (instr == 's') {
                 Resident stu = search(sc);
                 String result = "";
                 if (stu == null)
                     System.out.println("The room doesn't exist! Please try 'add'.");
                 else {
+                    result = booleanToString(stu.getResult());
                     if (stu.getResult() != null) {
-                        if (stu.getResult().equals(true))
-                            result = "positive";
-                        else
-                            result = "negative";
                         System.out.println("The resident in this room is " + stu.getName()
                             + ", and the test result is " + result + ".");
                     } else {
@@ -364,6 +387,7 @@ public class user_interface {
             else {
                 System.out.println("Unknown action! Please try again!");
             }
+            
         }
 
     }
