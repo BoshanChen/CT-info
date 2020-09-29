@@ -5,6 +5,11 @@
 // TA: Mu Cai
 // Lecturer: Florian Heimerl
 // Notes to Grader: <optional extra notes>
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 /**
@@ -44,7 +49,7 @@ public class user_interface {
             if(ans.equalsIgnoreCase("y")) break;
             else if(ans.equalsIgnoreCase("n")) {
                 Room room = new Room(dorm, num);
-                return table.put(dorm + num, room);
+                return table.userPut(dorm + num, room);
             }
         }
         // read resident info
@@ -56,7 +61,7 @@ public class user_interface {
         // create Room obj
         Room room = new Room(dorm, num, stu);
 
-        return table.put(dorm + num, room);// I will change it to table.userPut when finished
+        return table.userPut(dorm + num, room);// I will change it to table.userPut when finished
 
     }
 
@@ -73,7 +78,12 @@ public class user_interface {
         String dorm = (String)roomInfo[0];
         long num = (long)roomInfo[1];
         // remove operation
+        try {
         return table.remove(dorm + num);
+        } catch (java.util.NoSuchElementException e) {
+            System.out.println("oops! There's nothing with this key.");
+            return null;
+        }
     }
 
     /**
@@ -93,19 +103,47 @@ public class user_interface {
             System.out.println("The room does not existed! Please try 'add'.");
             return null;
         }
-        else if (!table.get(dorm + num).isEmpty()) { // updates resident's test result
-            String result;
-            Boolean res;
+        else if (!table.get(dorm + num).isEmpty()) {
             while(true) {
-                System.out.println("Please enter your latest test result (positive/negative/null): ");
-                result = sc.nextLine().toLowerCase();
-                if(result.equals("positive") || result.equals("negative") || result.equals("null")) {
-                    res = stringToBoolean(result);
-                    break;
-                }
-            }
-            table.updates(dorm, num, res);
+                Resident old = table.get(dorm + num).getResident();
+                System.out.println("This room is " + old.getName() + ", test result: " 
+                + booleanToString(old.getResult()) + ".");
+                System.out.println("What do you want to do? updates result(up); replace with a new resident (re); remove current resident(rm):");
+                String ans = sc.nextLine();
+                if (ans.equalsIgnoreCase("up")) { // updates resident's test result
+                    String result;
+                    Boolean res;
+                    while (true) {
+                        System.out.println(
+                            "Please enter your latest test result (positive/negative/null): ");
+                        result = sc.nextLine().toLowerCase();
+                        if (result.equals("positive") || result.equals("negative")
+                            || result.equals("null")) {
+                            res = stringToBoolean(result);
+                            break;
+                        }
+                    }
+            table.update(dorm, num, res);
             return table.get(dorm+num).getResident();
+                }
+                else if(ans.equalsIgnoreCase("re")) { //replace the resident with a new one
+                    String[] newR = readResInfo(sc);
+                    Resident curr = new Resident(newR[0], stringToBoolean(newR[1]));
+                    //Room room = table.get(dorm+num);
+                    //table.remove(dorm+num);
+                    //room.removeResident();
+                    //room.addResident(curr);
+                    //table.userPut(dorm+num, room);
+                    table.update(dorm, num, table.get(dorm+num).getResident(), "remove");
+                    table.update(dorm, num, curr, "");
+                    return table.get(dorm+num).getResident();
+                } 
+                else if(ans.equalsIgnoreCase("rm")) { // remove current resident
+                    table.update(dorm, num, table.get(dorm+num).getResident(), "remove");
+                    return null;
+                }
+            
+            }
         }
         else { // update resident to an empty room
             String[] resident = readResInfo(sc);
@@ -181,6 +219,7 @@ public class user_interface {
             String ans = sc.nextLine();
             if (ans.equalsIgnoreCase("y")) {
                 table.clear();
+                System.out.println("All data are deleted.");
                 return;
             } else if (ans.equalsIgnoreCase("n")) {
                 System.out.println("Operation canceled.");
@@ -202,7 +241,6 @@ public class user_interface {
                 + "(U):Update test result. If you have added your test result before, then use this to 'add' your information.\n"
                 + "(S):Search test result. This will need your dorm name and room number.\n"
                 + "(Q):Quit." + "(*):Clear all information.");
-        line();
     }
 
     /**
@@ -269,6 +307,14 @@ public class user_interface {
         return onlyLetters;
     }
 
+    /**
+     * Prompt the user to add resident info, and save the info as a String array with
+     * 2 items. The first (position 0) will be resident's name, and the second (position 1) will
+     * be resident's test result.
+     * 
+     * @param sc scanner to read user input
+     * @return String array containing user info
+     */
     private static String[] readResInfo(Scanner sc) {
         // user's name
         String name = "";
@@ -281,7 +327,7 @@ public class user_interface {
         }
         name = cap_string(name);
         // user's test result
-        System.out.println("Please enter your test result:(postive/negative/null)");
+        System.out.println("Please enter your test result:(positive/negative/null)");
         String result = "";
         while (true) {
             result = sc.nextLine();
@@ -300,6 +346,18 @@ public class user_interface {
         return ret;
     }
     
+    public static UniversityHousing getTable() {
+        return table;
+    }
+    
+    /**
+     * Prompt the user to add room info, adn save the info as an Object array with 
+     * 2 itmes. The first (position 0) will be dorm name, and the second (position 1) will
+     * be room number.
+     * 
+     * @param sc scanner to read user input
+     * @return Object array containing room info
+     */
     private static Object[] readRoomInfo(Scanner sc) {
         // dorm name
         String dorm = "";
@@ -328,22 +386,16 @@ public class user_interface {
         return new Object[] {dorm,num};
     }
     
-    public static void main(String[] arg) {
-        Scanner sc = new Scanner(System.in);
+    public static boolean execute(File file) throws java.io.FileNotFoundException {
+        Scanner sc = new Scanner(file);
         boolean first = true;
 
         char instr = '\0';
-        line();
-        System.out.println("Welcome to COVID-19 information of University Housing!\n"
-            + "In this application you will be able to add your test result, and delete or update it anytime!\n"
-            + "You can also search others' information if you know their name, dorm, and room number.");
-        menu();
         while (instr != 'q') {
             if(!first)line();
             first = false;
-            System.out.println("Enter your action:");
+            try {
             instr = firstChar(sc);
-
             if (instr == 'a') {
                 if (add(sc))
                     System.out.println("added successfully!");
@@ -387,7 +439,103 @@ public class user_interface {
             else {
                 System.out.println("Unknown action! Please try again!");
             }
+            } catch (Exception e) {
+                System.out.println("Some commands doesn't work in this file!");
+                return false;
+            }
+        }
+        System.out.println("Done!");
+        return true;
+    }
+    
+    public static void execute(Scanner sc) {
+        boolean first = true;
+
+        char instr = '\0';
+        menu();
+        while (instr != 'q') {
+            line();
+            first = false;
+            System.out.println("Enter your action:");
+            instr = firstChar(sc);
+
+            if (instr == 'a') {
+                if (add(sc))
+                    System.out.println("added successfully!");
+                else
+                    System.out.println("added failed :( Please try again.");
+                continue;
+            } else if (instr == 'd') {
+                Room room = delete(sc);
+                if (room == null)
+                    System.out.println("The room doesn't exist! Please try another one.");
+                else
+                    System.out.println("Room:" + room.getDormName() + ", " + room.getRoomNum()
+                        + " has been removed.");
+                continue;
+            } else if (instr == 'm') {
+                menu();
+            } else if (instr == 'u') {
+                Resident res = update(sc);
+                if(res == null) {System.out.println("This is an empty room now."); continue;}
+                String result = booleanToString(res.getResult());
+                System.out.println("The resident has been updated:" + res.getName() + ", test result: " + result + ".");
+            } else if (instr == 's') {
+                Resident stu = search(sc);
+                String result = "";
+                if (stu == null)
+                    System.out.println("The room doesn't exist! Please try 'add'.");
+                else {
+                    result = booleanToString(stu.getResult());
+                    if (stu.getResult() != null) {
+                        System.out.println("The resident in this room is " + stu.getName()
+                            + ", and the test result is " + result + ".");
+                    } else {
+                        System.out.println("The resident in this room is " + stu.getName()
+                            + ", and the resident hasn't taken any test yet.");
+                    }
+                }
+
+            } else if (instr == 'q')
+                break;
+            else if (instr == '*')
+                clear(sc);
+            else {
+                System.out.println("Unknown action! Please try again!");
+            }
             
+        }
+    }
+    
+    public static void main(String[] arg) {
+        Scanner sc = new Scanner(System.in);
+        line();
+        System.out.println("Welcome to COVID-19 information of University Housing!\n"
+            + "In this application you will be able to add your test result, and delete or update it anytime!\n"
+            + "You can also search others' information if you know their name, dorm, and room number.");
+        line();
+        char ans = '\0';
+        while(true) {
+            System.out.println("Do you have an input file in the current working directory? (y/n):");
+            ans = firstChar(sc);
+            if(ans == 'n') {
+                execute(sc);
+                break;
+            } else if (ans == 'y') {
+                System.out.println("Please enter the filename: ");
+                Path path = FileSystems.getDefault().getPath("").toAbsolutePath();
+                String s = path.toString();
+                String name = s + "/" + sc.nextLine();
+                File file = new File(name);
+                try {
+                    if(execute(file)) break;
+                    continue;
+                } catch (FileNotFoundException e) {
+                    System.out.println("oops! The file doesn't exist, please try again.");
+                } catch (Exception e) {
+                    System.out.println("This file may not work, please try another one.");
+                }
+            }
         }
 
     }

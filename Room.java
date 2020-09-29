@@ -10,7 +10,7 @@
 public class Room {
 
   private String dormName; // name of the residence hall
-  private int roomNum; // room number
+  private long roomNum; // room number
   private Resident resident; // a ResidentInfo instance containing the resident information
 
   /**
@@ -21,7 +21,7 @@ public class Room {
    * @param dormName name of the residence hall
    * @param roomNum  room number
    */
-  public Room(String dormName, int roomNum) {
+  public Room(String dormName, long roomNum) {
     this.dormName = dormName;
     this.roomNum = roomNum;
     this.resident = null;
@@ -35,7 +35,7 @@ public class Room {
    * @param roomNum room number
    * @param resident resident information instance
    */
-  public Room(String dormName, int roomNum, Resident resident) {
+  public Room(String dormName, long roomNum, Resident resident) {
     this.dormName = dormName;
     this.roomNum = roomNum;
     this.resident = resident;
@@ -92,7 +92,7 @@ public class Room {
    * 
    * @return room number
    */
-  public int getRoomNum() {
+  public long getRoomNum() {
     return roomNum;
   }
 
@@ -114,8 +114,23 @@ public class Room {
   public int hashCode() {
     // This is just my suggestion
     String hashingString = new String(this.dormName + this.roomNum);
-    return hashingString.hashCode();  
+    return hashingString.hashCode();
   }
-  
-  
+
+  /**
+   * Determines whether this Room instance equals another Room instance by comparing their residence
+   * hall names and room numbers.
+   * 
+   * @param room another Room instance
+   * @return true if they have the same residence hall name and room number
+   */
+  @Override
+  public boolean equals(Object room) {
+    return this.getDormName().equals(((Room) room).getDormName())
+        & this.getRoomNum() == ((Room) room).getRoomNum();
+
+  }
+
+
 }
+

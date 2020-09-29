@@ -13,19 +13,8 @@ public class Resident {
                         // 2)FALSE represents a NEGATIVE test result; 3)NULL represents NOT TESTED;
 
   /**
-   * Constructs a resident instance with his or her name, and age provided. The COVID-19 test result
-   * is set to null if not provided.
-   * 
-   * @param name resident's name
-   * @param age  resident's age
-   */
-  public Resident(String name) {
-    this.name = name;
-    this.test = null;
-  }
-
-  /**
-   * Constructs a resident instance with his or her name, age, and COVID-19 test result provided.
+   * Constructs a resident instance with his or her name, age, and COVID-19 test result. The test
+   * result can be a null reference which indicates unknown result.
    * 
    * @param name resident's name
    * @param age  resident's age
@@ -34,6 +23,15 @@ public class Resident {
   public Resident(String name, Boolean test) {
     this.name = name;
     this.test = test;
+  }
+  
+  /**
+   * Sets the COVID-19 test result of this resident.
+   * 
+   * @param result COVID-19 test result of this resident
+   */
+  public void setResult(Boolean result) {
+    this.test = result;
   }
   
   /**
